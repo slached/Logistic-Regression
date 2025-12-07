@@ -6,9 +6,11 @@ def args_parser():
     parser.add_argument(
         "--lr", type=float, default=0.1, help="learning rate for each update step"
     )
-    # GD(Gradient Descent) MN(Modified-Newton) LM(Levenberg-Marquardt) CG(Conjugate Gradient)
+    # gd(Gradient Descent) mn(Modified-Newton) 
+    # lm(Levenberg-Marquardt) cg(Conjugate Gradient)
+    
     parser.add_argument(
-        "--optimizer", type=str, default="GD", help="using optimizer for update"
+        "--optimizer", type=str, default="lgfgs".upper(), help="using optimizer for update"
     )
     parser.add_argument(
         "--iteration",
@@ -25,7 +27,7 @@ def args_parser():
     parser.add_argument(
         "--lambda_",
         type=float,
-        default=1e-2,
+        default=1000,
         help="levenberg-marquardt's parameter for LM optimizer",
     )
 

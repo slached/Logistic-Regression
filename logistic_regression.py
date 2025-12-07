@@ -5,10 +5,20 @@ epsilon = 1e-5
 
 
 class LogisticRegression:
-    def __init__(self, args, X_train, Y_train, X_test):
+    def __init__(
+        self,
+        args,
+        X_train,
+        Y_train,
+        X_test,
+        prev_gradient,
+        prev_update_direction,
+    ):
         self.X_train = X_train
         self.Y_train = Y_train
         self.X_test = X_test
+        self.prev_gradient = prev_gradient
+        self.prev_update_direction = prev_update_direction
 
         self.num_samples = self.X_train.shape[0]
         self.dimension = self.X_train.shape[1]
@@ -51,6 +61,7 @@ class LogisticRegression:
         return the gradient of objective function
         note that the gradient is averaged over all samples
         """
+
         sigWeights = self.sigmoid(self.X_train @ weights)
         matGrad = self.X_train.T @ (sigWeights - self.Y_train)
         return matGrad / self.num_samples + self.gamma * weights
@@ -75,31 +86,48 @@ class LogisticRegression:
 
         if self.optimizer == "GD":
             update_direction = gradient
+            self.weights -= self.lr * update_direction
         elif self.optimizer == "MN":
-            update_direction = (
-                self.lr * np.linalg.inv(self.Hessian(self.weights)) @ gradient
-            )
+            update_direction = np.linalg.inv(self.Hessian(self.weights)) @ gradient
+            self.weights -= self.lr * update_direction
         elif self.optimizer == "LM":
-
             update_direction = (
                 np.linalg.inv(
                     self.Hessian(self.weights)
-                    + self.args.lambda_ * np.identity(self.dimension)
+                    + (self.args.lambda_ * np.identity(self.dimension))
                 )
                 @ gradient
             )
+            new_weight = self.weights - update_direction
 
-            new_weight = self.weights - (self.lr * update_direction)
             # look if new weight has less error then divide the lambda by 2 else multiply by 2
             if self.objective(new_weight) < self.objective(self.weights):
                 self.args.lambda_ /= 2
             else:
                 self.args.lambda_ *= 2
+
+            # after updating lambda value we can set new weight value
+            self.weights = new_weight
+        elif self.optimizer == "CG":
+            # this means first iteration
+            if self.prev_gradient is None:
+                update_direction = -gradient
+            else:
+                alpha = (
+                    np.linalg.norm(gradient) ** 2
+                    / np.linalg.norm(self.prev_gradient) ** 2
+                )
+                update_direction = -gradient + alpha * self.prev_update_direction
+
+            self.weights += self.lr * update_direction
         else:
             raise NotImplementedError
 
-        self.weights -= self.lr * update_direction
         a, b = self.diff_cal(self.weights)
+
+        # save prev states for next iteration
+        self.prev_gradient = gradient
+        self.prev_update_direction = update_direction
         return a, b
 
     def CVXsolve(self):

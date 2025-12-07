@@ -19,10 +19,15 @@ if __name__ == "__main__":
     (x_train, y_train), (x_test, y_test) = data_preprocess(args)
 
     print("learning rate: ", args.lr)
-    print("Optimizer: ", args.optimizer)
+    print("Optimizer: ", args.optimizer.upper())
 
     Model = LogisticRegression(
-        args=args, X_train=x_train, Y_train=y_train, X_test=x_test
+        args=args,
+        X_train=x_train,
+        Y_train=y_train,
+        X_test=x_test,
+        prev_gradient=None,
+        prev_update_direction=None,
     )
     # start timer after cvx calculation done
     start_time = time.perf_counter()
@@ -41,17 +46,26 @@ if __name__ == "__main__":
     """
     update
     """
-    for i in range(args.iteration):
 
+    for i in range(args.iteration):
         weight_diff, obj_diff = Model.update()
+
         print("\n------------ Iteration {} ------------".format(i + 1))
         print("weight error: {:.4e}".format(weight_diff))
         print("objective error: {:.4e}".format(obj_diff))
+        (
+            print("lambda value: {:.4e}".format(args.lambda_))
+            if args.optimizer == "LM"
+            else None
+        )
+
         weight_diff_list.append(weight_diff)
         obj_diff_list.append(obj_diff)
 
         if weight_diff / np.sqrt(Model.dimension) <= 1e-5:
             break
+
+    end_time = time.perf_counter()
 
     file_name = "./results/{}_{}.pkl".format("logreg", args.optimizer)
     file_name = os.path.join(current_work_dir, file_name)
@@ -64,7 +78,6 @@ if __name__ == "__main__":
         if val[i] == val2[i]:
             correct += 1
 
-    end_time = time.perf_counter()
     percent_correct = correct / len(val2) * 100
 
     print(percent_correct, "Accuracy: %")
