@@ -80,7 +80,7 @@ Generated figures are saved into the `results/` directory.
 
 The model predicts probabilities using the **sigmoid** function:
 
-\[ h\_`\theta`{=tex}(x) = `\frac{1}{1 + e^{-(w^T x)}}`{=tex} \]
+![sigmoid](https://latex.codecogs.com/png.latex?h_\theta(x)%20=%20\frac{1}{1%20+%20e^{-(w^T%20x)}})
 
 And minimizes the **regularized cross-entropy loss**:
 
