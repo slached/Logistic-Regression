@@ -162,7 +162,7 @@ class LogisticRegression:
         a, b = self.diff_cal(self.weights)
 
         # save prev states for next iteration
-        self.prev_gradient = gradient
+        self.prev_gradient = old_gradient
         self.prev_update_direction = update_direction
         self.prev_weights = old_weights
 
