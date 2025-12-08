@@ -84,9 +84,8 @@ The model predicts probabilities using the **sigmoid** function:
 
 And minimizes the **regularized cross-entropy loss**:
 
-\[ J(w) = -`\frac{1}{m}`{=tex}`\sum`{=tex}\_{i=1}\^m
-`\left[ y_i\log(h(x_i)) + (1 - y_i)\log(1 - h(x_i)) \right] `{=tex}+
-`\frac{\lambda}{2m}`{=tex}\|w\|\_2\^2 \]
+![Loss function](https://latex.codecogs.com/png.latex?J(w)%20=%20-%5Cfrac%7B1%7D%7Bm%7D%5Csum_%7Bi%3D1%7D%5Em%20%5Cleft%5B%20y_i%5Clog%28h%28x_i%29%29%20+%20%281%20-%20y_i%29%5Clog%281%20-%20h%28x_i%29%29%20%5Cright%5D%20+%20%5Cfrac%7B%5Clambda%7D%7B2m%7D%5C%7Cw%5C%7C_2%5E2)
+
 
 Gradients are derived analytically and updated using gradient descent.
 
@@ -109,7 +108,3 @@ If you use custom data, ensure:
 -   This implementation is strictly educational --- it is intentionally
     simple and fully transparent.
 -   No high-level ML libraries are used.
-
-## License
-
-MIT License. Feel free to use, modify, and contribute.
