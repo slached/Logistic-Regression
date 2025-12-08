@@ -1,5 +1,6 @@
 import numpy as np
 import cvxpy as cp
+from collections import deque
 
 epsilon = 1e-5
 
@@ -13,21 +14,33 @@ class LogisticRegression:
         X_test,
         prev_gradient,
         prev_update_direction,
+        prev_weights,
     ):
         self.X_train = X_train
         self.Y_train = Y_train
         self.X_test = X_test
+
         self.prev_gradient = prev_gradient
         self.prev_update_direction = prev_update_direction
+        self.prev_weights = prev_weights
 
         self.num_samples = self.X_train.shape[0]
         self.dimension = self.X_train.shape[1]
         self.weights = np.zeros_like(X_train[0])
+        self.G = np.identity(self.dimension)
 
         self.args = args
         self.lr = args.lr
         self.optimizer = args.optimizer
         self.gamma = args.gamma
+
+        self.memory_size = self.args.memory_size
+        # auto flush last item data structure
+        # s differences of weights
+        # y differences of gradient vectors
+        self.s_history = deque(maxlen=self.memory_size)
+        self.y_history = deque(maxlen=self.memory_size)
+        self.rho_history = deque(maxlen=self.memory_size)
 
         print("============= CVX solving =============")
         self.opt_weights, self.opt_obj = self.CVXsolve()
@@ -83,6 +96,9 @@ class LogisticRegression:
         update model weights using GD  step
         """
         gradient = self.gradient(self.weights)
+        # copy old weights
+        old_weights = self.weights.copy()
+        old_gradient = gradient.copy()
 
         if self.optimizer == "GD":
             update_direction = gradient
@@ -120,6 +136,26 @@ class LogisticRegression:
                 update_direction = -gradient + alpha * self.prev_update_direction
 
             self.weights += self.lr * update_direction
+        elif self.optimizer == "LBFGS":
+            update_direction = self.two_loop_recursion(gradient=gradient)
+
+            self.weights += self.lr * update_direction
+
+            new_grad = self.gradient(self.weights)
+
+            # for memory save
+            s = self.weights - old_weights
+            y = new_grad - old_gradient
+
+            sy_dot = np.dot(s, y)
+            # for safety steps
+            if sy_dot > 1e-10:
+                rho = 1.0 / sy_dot
+
+                self.s_history.append(s)
+                self.y_history.append(y)
+                self.rho_history.append(rho)
+
         else:
             raise NotImplementedError
 
@@ -128,6 +164,8 @@ class LogisticRegression:
         # save prev states for next iteration
         self.prev_gradient = gradient
         self.prev_update_direction = update_direction
+        self.prev_weights = old_weights
+
         return a, b
 
     def CVXsolve(self):
@@ -157,3 +195,47 @@ class LogisticRegression:
         weight_diff = np.linalg.norm(weights - self.opt_weights)
         obj_diff = abs(self.objective(weights) - self.opt_obj)
         return weight_diff, obj_diff
+
+    def two_loop_recursion(self, gradient):
+        # q is old gradient
+        q = gradient.copy()
+        alpha_list = [0] * len(self.s_history)
+
+        # Backward from newest to oldest
+        for i in range(len(self.s_history) - 1, -1, -1):
+            s = self.s_history[i]
+            y = self.y_history[i]
+            rho = self.rho_history[i]
+            # check similarities of gradient vector and weighs differences
+            alpha = rho * np.dot(s, q)
+
+            alpha_list[i] = alpha
+            # subtract little piece of change of gradient from current gradient vector
+            q = q - alpha * y
+
+        # Scaling
+        # Initial Hessian Approximation
+        # H0 = (s_last * y_last) / (y_last * y_last) * I
+        if len(self.s_history) > 0:
+            s_last = self.s_history[-1]
+            y_last = self.y_history[-1]
+            gamma = np.dot(s_last, y_last) / np.dot(y_last, y_last)
+            z = q * gamma
+        else:
+            # if memory is empty
+            z = q
+
+        # Forwarding
+        # From oldest to newest
+        for i in range(len(self.s_history)):
+            s = self.s_history[i]
+            y = self.y_history[i]
+            rho = self.rho_history[i]
+            alpha = alpha_list[i]
+            # z is scaled and peeled gradient vector
+            # beta is similarity of this scaled gradient and difference of gradients
+            beta = rho * np.dot(y, z)
+            # finally we can add to our scaled gradient weight diff * alpha - beta
+            z = z + s * (alpha - beta)
+        # this is approximately -G and we barely use memory(in this case 3 deque list of element of 10)
+        return -z

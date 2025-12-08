@@ -28,6 +28,7 @@ if __name__ == "__main__":
         X_test=x_test,
         prev_gradient=None,
         prev_update_direction=None,
+        prev_weights=None
     )
     # start timer after cvx calculation done
     start_time = time.perf_counter()
